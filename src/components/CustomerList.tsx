@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Check, X, Plus, User, Phone, MapPin, Loader2, Trash2 } from 'lucide-react';
+import { Check, X, Plus, User, Phone, MapPin, Loader2, Trash2, FileText } from 'lucide-react';
 import { supabase, Customer, Payment } from '../lib/supabase';
+import Invoice from './Invoice';
 
 interface CustomerWithPayment extends Customer {
   hasPaid: boolean;
@@ -13,16 +14,19 @@ interface CustomerListProps {
   selectedYear: number;
   searchQuery: string;
   onRefresh: () => void;
+  triggerRefresh: number;
 }
 
-export default function CustomerList({ selectedMonth, selectedYear, searchQuery, onRefresh }: CustomerListProps) {
+export default function CustomerList({ selectedMonth, selectedYear, searchQuery, onRefresh, triggerRefresh }: CustomerListProps) {
   const [customers, setCustomers] = useState<CustomerWithPayment[]>([]);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState<string | null>(null);
+  const [invoiceCustomer, setInvoiceCustomer] = useState<CustomerWithPayment | null>(null);
+  const [selectedPaymentDay, setSelectedPaymentDay] = useState(1);
 
   useEffect(() => {
     loadCustomers();
-  }, [selectedMonth, selectedYear]);
+  }, [selectedMonth, selectedYear, triggerRefresh]);
 
   const loadCustomers = async () => {
     setLoading(true);
@@ -150,6 +154,8 @@ export default function CustomerList({ selectedMonth, selectedYear, searchQuery,
     c.phone.includes(searchQuery)
   );
 
+  const dayCustomers = filteredCustomers.filter(c => c.payment_day === selectedPaymentDay);
+
   if (filteredCustomers.length === 0) {
     return (
       <div className="text-center py-12 text-gray-500">
@@ -159,23 +165,69 @@ export default function CustomerList({ selectedMonth, selectedYear, searchQuery,
     );
   }
 
-  const paidCount = filteredCustomers.filter(c => c.hasPaid).length;
-  const totalCount = filteredCustomers.length;
+  const groupedByPaymentDay = {
+    1: filteredCustomers.filter(c => c.payment_day === 1),
+    10: filteredCustomers.filter(c => c.payment_day === 10),
+    20: filteredCustomers.filter(c => c.payment_day === 20),
+  };
+
+  const paidCount = dayCustomers.filter(c => c.hasPaid).length;
+  const totalCount = dayCustomers.length;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
+      {invoiceCustomer && (
+        <Invoice
+          customerName={invoiceCustomer.name}
+          customerAddress={invoiceCustomer.address}
+          customerPhone={invoiceCustomer.phone}
+          monthlyFee={invoiceCustomer.monthly_fee}
+          paymentDay={invoiceCustomer.payment_day}
+          month={selectedMonth}
+          year={selectedYear}
+          onClose={() => setInvoiceCustomer(null)}
+        />
+      )}
+
+      <div className="flex gap-2">
+        {[1, 10, 20].map(day => {
+          const dayCount = groupedByPaymentDay[day as keyof typeof groupedByPaymentDay].length;
+          const dayPaid = groupedByPaymentDay[day as keyof typeof groupedByPaymentDay].filter(c => c.hasPaid).length;
+          return (
+            <button
+              key={day}
+              onClick={() => setSelectedPaymentDay(day)}
+              className={`flex-1 py-3 px-4 rounded-lg font-semibold transition-all ${
+                selectedPaymentDay === day
+                  ? 'bg-blue-600 text-white shadow-lg scale-105'
+                  : 'bg-white border-2 border-gray-300 text-gray-900 hover:border-blue-600'
+              }`}
+            >
+              <div className="text-sm opacity-90">Tgl {day}</div>
+              <div className="text-lg font-bold">{dayPaid}/{dayCount}</div>
+            </button>
+          );
+        })}
+      </div>
+
       <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white p-4 rounded-lg shadow-md">
-        <div className="text-sm opacity-90">Status Pembayaran</div>
+        <div className="text-sm opacity-90">Status Pembayaran Tanggal {selectedPaymentDay}</div>
         <div className="text-3xl font-bold mt-1">
           {paidCount} / {totalCount}
         </div>
         <div className="text-sm opacity-90 mt-1">
-          {Math.round((paidCount / totalCount) * 100)}% sudah bayar
+          {totalCount > 0 ? Math.round((paidCount / totalCount) * 100) : 0}% sudah bayar
         </div>
       </div>
 
-      <div className="space-y-2">
-        {filteredCustomers.map((customer) => (
+      {dayCustomers.length === 0 ? (
+        <div className="text-center py-12 text-gray-500">
+          <User className="w-16 h-16 mx-auto mb-4 opacity-50" />
+          <p>Tidak ada pelanggan dengan tanggal pembayaran {selectedPaymentDay}</p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {dayCustomers.map((customer) => (
           <div
             key={customer.id}
             className={`bg-white rounded-lg shadow-sm border-2 transition-all ${
@@ -220,33 +272,41 @@ export default function CustomerList({ selectedMonth, selectedYear, searchQuery,
                   <button
                     onClick={() => togglePayment(customer)}
                     disabled={processing === customer.id}
-                    className={`w-16 h-16 rounded-full flex items-center justify-center transition-all ${
+                    className={`w-12 h-12 rounded-full flex items-center justify-center transition-all text-sm ${
                       customer.hasPaid
                         ? 'bg-green-500 hover:bg-green-600 text-white shadow-lg'
                         : 'bg-gray-200 hover:bg-gray-300 text-gray-600'
                     } disabled:opacity-50 disabled:cursor-not-allowed`}
                   >
                     {processing === customer.id ? (
-                      <Loader2 className="w-8 h-8 animate-spin" />
+                      <Loader2 className="w-6 h-6 animate-spin" />
                     ) : customer.hasPaid ? (
-                      <Check className="w-8 h-8" strokeWidth={3} />
+                      <Check className="w-6 h-6" strokeWidth={3} />
                     ) : (
-                      <X className="w-8 h-8" strokeWidth={3} />
+                      <X className="w-6 h-6" strokeWidth={3} />
                     )}
+                  </button>
+                  <button
+                    onClick={() => setInvoiceCustomer(customer)}
+                    disabled={processing === customer.id}
+                    className="w-12 h-12 rounded-full flex items-center justify-center bg-blue-100 hover:bg-blue-200 text-blue-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <FileText className="w-6 h-6" />
                   </button>
                   <button
                     onClick={() => deleteCustomer(customer)}
                     disabled={processing === customer.id}
-                    className="w-16 h-16 rounded-full flex items-center justify-center bg-red-100 hover:bg-red-200 text-red-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-12 h-12 rounded-full flex items-center justify-center bg-red-100 hover:bg-red-200 text-red-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <Trash2 className="w-8 h-8" />
+                    <Trash2 className="w-6 h-6" />
                   </button>
                 </div>
               </div>
             </div>
           </div>
         ))}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

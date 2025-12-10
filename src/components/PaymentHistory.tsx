@@ -13,10 +13,10 @@ interface PaymentRecord {
   month: number;
   year: number;
   amount: number;
-  notes: string;
-  customer?: {
+  notes: string | null;
+  customers: {
     name: string;
-  };
+  }[] | null;
 }
 
 export default function PaymentHistory({ isOpen, onClose }: PaymentHistoryProps) {
@@ -34,23 +34,34 @@ export default function PaymentHistory({ isOpen, onClose }: PaymentHistoryProps)
   const loadPayments = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
+      // First, get payments
+      const { data: paymentsData, error: paymentsError } = await supabase
         .from('payments')
-        .select(`
-          id,
-          payment_date,
-          month,
-          year,
-          amount,
-          notes,
-          customer:customers(name)
-        `)
+        .select('*')
         .eq('month', filterMonth)
         .eq('year', filterYear)
         .order('payment_date', { ascending: false });
 
-      if (error) throw error;
-      setPayments(data as any);
+      if (paymentsError) throw paymentsError;
+
+      // Then, get customers for those payments
+      const paymentsWithCustomers = await Promise.all(
+        (paymentsData || []).map(async (payment) => {
+          const { data: customerData } = await supabase
+            .from('customers')
+            .select('name')
+            .eq('id', payment.customer_id)
+            .single();
+
+          return {
+            ...payment,
+            customers: customerData ? [customerData] : null
+          };
+        })
+      );
+
+      console.log('Payment data with customers:', paymentsWithCustomers);
+      setPayments(paymentsWithCustomers);
     } catch (error) {
       console.error('Error loading payments:', error);
     } finally {
@@ -146,7 +157,7 @@ export default function PaymentHistory({ isOpen, onClose }: PaymentHistoryProps)
                   <div className="flex justify-between items-start">
                     <div className="flex-1">
                       <h3 className="font-semibold text-gray-900">
-                        {payment.customer?.name || 'Unknown'}
+                        {payment.customers?.[0]?.name || 'Unknown'}
                       </h3>
                       <p className="text-sm text-gray-600 mt-1">
                         {new Date(payment.payment_date).toLocaleDateString('id-ID', {

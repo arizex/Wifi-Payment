@@ -3,7 +3,6 @@ import { Plus, History, Calendar, Wifi, Search, X } from 'lucide-react';
 import CustomerList from './components/CustomerList';
 import AddCustomerModal from './components/AddCustomerModal';
 import PaymentHistory from './components/PaymentHistory';
-import Marquee from 'react-fast-marquee';
 
 function App() {
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
@@ -11,7 +10,7 @@ function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
-  const [refreshKey, setRefreshKey] = useState(0);
+  const [triggerRefresh, setTriggerRefresh] = useState(0);
 
   const monthNames = [
     'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
@@ -19,28 +18,22 @@ function App() {
   ];
 
   const handleRefresh = () => {
-    setRefreshKey(prev => prev + 1);
+    setTriggerRefresh(prev => prev + 1);
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
       <div className="max-w-4xl mx-auto px-4 py-6 pb-24">
         <div className="bg-white rounded-2xl shadow-xl p-6 mb-6">
-          <div className="flex items-center justify-center mb-6">
-            <div className="flex items-center text-center">             
-              <div>
+          <div className="flex items-center justify-center text-center mb-6">
+            <div className="flex items-center">
+             <div>
                 <h1 className="text-2xl font-bold text-blue-900">
-                  WIFI PAYMENT
+                  SOFIA.NET WIFI PAYMENT
                 </h1>
                 <p className="text-sm text-gray-600">
-                  Created By Aris Developer Handal JOSJISHT
+                  Created by Aris Developer Handal
                 </p>
-                <div className='bg-blue-600'>
-                <Marquee className='text-white'>
-                  Jangan nakal ya... kalau sudah jangan lupa duitnya di setorkan  
-                </Marquee>
-
-                </div>
               </div>
             </div>
           </div>
@@ -104,11 +97,11 @@ function App() {
         </div>
 
         <CustomerList
-          key={refreshKey}
           selectedMonth={selectedMonth}
           selectedYear={selectedYear}
           searchQuery={searchQuery}
           onRefresh={handleRefresh}
+          triggerRefresh={triggerRefresh}
         />
       </div>
 
@@ -123,7 +116,7 @@ function App() {
           </button>
           <button
             onClick={() => setShowHistory(true)}
-            className="flex-1 bg-green-600 hover:bg-green-700 text-white font-semibold py-4 px-6 rounded-xl shadow-lg flex items-center justify-center transition-colors"
+            className="flex-1 bg-orange-600 hover:bg-green-700 text-white font-semibold py-4 px-6 rounded-xl shadow-lg flex items-center justify-center transition-colors"
           >
             <History className="w-5 h-5 mr-2" />
             Riwayat

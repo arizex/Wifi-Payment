@@ -14,6 +14,7 @@ export default function AddCustomerModal({ isOpen, onClose, onSuccess }: AddCust
     address: '',
     phone: '',
     monthly_fee: '',
+    payment_day: '1',
   });
   const [loading, setLoading] = useState(false);
 
@@ -34,12 +35,13 @@ export default function AddCustomerModal({ isOpen, onClose, onSuccess }: AddCust
         address: formData.address,
         phone: formData.phone,
         monthly_fee: parseInt(formData.monthly_fee),
+        payment_day: parseInt(formData.payment_day),
         is_active: true,
       });
 
       if (error) throw error;
 
-      setFormData({ name: '', address: '', phone: '', monthly_fee: '' });
+      setFormData({ name: '', address: '', phone: '', monthly_fee: '', payment_day: '1' });
       onSuccess();
       onClose();
     } catch (error) {
@@ -121,6 +123,22 @@ export default function AddCustomerModal({ isOpen, onClose, onSuccess }: AddCust
               required
               min="0"
             />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Tanggal Pembayaran <span className="text-red-500">*</span>
+            </label>
+            <select
+              value={formData.payment_day}
+              onChange={(e) => setFormData({ ...formData, payment_day: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              required
+            >
+              <option value="1">Tanggal 1</option>
+              <option value="10">Tanggal 10</option>
+              <option value="20">Tanggal 20</option>
+            </select>
           </div>
 
           <div className="flex gap-2 pt-2">

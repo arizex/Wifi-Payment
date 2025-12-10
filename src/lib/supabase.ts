@@ -16,6 +16,7 @@ export interface Customer {
   phone: string;
   monthly_fee: number;
   is_active: boolean;
+  payment_day: number;
   created_at: string;
 }
 
@@ -31,5 +32,5 @@ export interface Payment {
 
   customer?: {
     name: string;
-  };
+  }
 }
