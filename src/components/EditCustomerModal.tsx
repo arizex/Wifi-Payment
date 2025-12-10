@@ -1,14 +1,15 @@
-import { useState } from 'react';
-import { X, Loader2, UserPlus } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { useState, useEffect } from 'react';
+import { X, Loader2, UserCog } from 'lucide-react';
+import { supabase, Customer } from '../lib/supabase';
 
-interface AddCustomerModalProps {
+interface EditCustomerModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
+  customer: Customer | null;
 }
 
-export default function AddCustomerModal({ isOpen, onClose, onSuccess }: AddCustomerModalProps) {
+export default function EditCustomerModal({ isOpen, onClose, onSuccess, customer }: EditCustomerModalProps) {
   const [formData, setFormData] = useState({
     name: '',
     address: '',
@@ -18,7 +19,20 @@ export default function AddCustomerModal({ isOpen, onClose, onSuccess }: AddCust
   });
   const [loading, setLoading] = useState(false);
 
-  if (!isOpen) return null;
+  // Update form data ketika customer berubah
+  useEffect(() => {
+    if (customer) {
+      setFormData({
+        name: customer.name || '',
+        address: customer.address || '',
+        phone: customer.phone || '',
+        monthly_fee: customer.monthly_fee?.toString() || '',
+        payment_day: customer.payment_day?.toString() || '1',
+      });
+    }
+  }, [customer]);
+
+  if (!isOpen || !customer) return null;
 
   // Fungsi untuk capitalize setiap kata
   const capitalizeName = (text: string) => {
@@ -42,23 +56,24 @@ export default function AddCustomerModal({ isOpen, onClose, onSuccess }: AddCust
       // Capitalize nama sebelum disimpan
       const capitalizedName = capitalizeName(formData.name);
 
-      const { error } = await supabase.from('customers').insert({
-        name: capitalizedName,
-        address: formData.address,
-        phone: formData.phone,
-        monthly_fee: parseInt(formData.monthly_fee),
-        payment_day: parseInt(formData.payment_day),
-        is_active: true,
-      });
+      const { error } = await supabase
+        .from('customers')
+        .update({
+          name: capitalizedName,
+          address: formData.address,
+          phone: formData.phone,
+          monthly_fee: parseInt(formData.monthly_fee),
+          payment_day: parseInt(formData.payment_day),
+        })
+        .eq('id', customer.id);
 
       if (error) throw error;
 
-      setFormData({ name: '', address: '', phone: '', monthly_fee: '', payment_day: '1' });
       onSuccess();
       onClose();
     } catch (error) {
-      console.error('Error adding customer:', error);
-      alert('Gagal menambahkan pelanggan');
+      console.error('Error updating customer:', error);
+      alert('Gagal mengupdate pelanggan');
     } finally {
       setLoading(false);
     }
@@ -69,8 +84,8 @@ export default function AddCustomerModal({ isOpen, onClose, onSuccess }: AddCust
       <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between p-4 border-b sticky top-0 bg-white">
           <h2 className="text-xl font-bold text-gray-900 flex items-center">
-            <UserPlus className="w-6 h-6 mr-2 text-blue-600" />
-            Tambah Pelanggan
+            <UserCog className="w-6 h-6 mr-2 text-orange-600" />
+            Edit Pelanggan
           </h2>
           <button
             onClick={onClose}
@@ -90,7 +105,7 @@ export default function AddCustomerModal({ isOpen, onClose, onSuccess }: AddCust
               type="text"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
               placeholder="Masukkan nama"
               required
             />
@@ -104,7 +119,7 @@ export default function AddCustomerModal({ isOpen, onClose, onSuccess }: AddCust
             <textarea
               value={formData.address}
               onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
               placeholder="Masukkan alamat"
               rows={2}
             />
@@ -118,7 +133,7 @@ export default function AddCustomerModal({ isOpen, onClose, onSuccess }: AddCust
               type="tel"
               value={formData.phone}
               onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
               placeholder="08xx xxxx xxxx"
             />
           </div>
@@ -131,7 +146,7 @@ export default function AddCustomerModal({ isOpen, onClose, onSuccess }: AddCust
               type="number"
               value={formData.monthly_fee}
               onChange={(e) => setFormData({ ...formData, monthly_fee: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
               placeholder="100000"
               required
               min="0"
@@ -145,7 +160,7 @@ export default function AddCustomerModal({ isOpen, onClose, onSuccess }: AddCust
             <select
               value={formData.payment_day}
               onChange={(e) => setFormData({ ...formData, payment_day: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
               required
             >
               <option value="1">Tanggal 1</option>
@@ -166,7 +181,7 @@ export default function AddCustomerModal({ isOpen, onClose, onSuccess }: AddCust
             <button
               type="submit"
               disabled={loading}
-              className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center"
+              className="flex-1 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50 flex items-center justify-center"
             >
               {loading ? (
                 <>
@@ -174,7 +189,7 @@ export default function AddCustomerModal({ isOpen, onClose, onSuccess }: AddCust
                   Menyimpan...
                 </>
               ) : (
-                'Tambah Pelanggan'
+                'Update Pelanggan'
               )}
             </button>
           </div>

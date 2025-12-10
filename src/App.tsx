@@ -29,7 +29,7 @@ function App() {
             <div className="flex items-center">
              <div>
                 <h1 className="text-2xl font-bold text-blue-900">
-                  SOFIA.NET WIFI PAYMENT
+                  SOFIA.NET
                 </h1>
                 <p className="text-sm text-gray-600">
                   Created by Aris Developer Handal

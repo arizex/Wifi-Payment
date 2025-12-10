@@ -384,18 +384,6 @@ export default function Invoice({
               </div>
             </div>
 
-            {/* Jatuh Tempo */}
-            <div className="text-center text-xs mb-3 py-2 bg-gray-100 border border-gray-400">
-              <div className="font-bold">⚠️ JATUH TEMPO</div>
-              <div className="mt-1">{paymentDay} {monthNames[month]} {year}</div>
-            </div>
-
-            {/* Catatan */}
-            <div className="text-center text-xs text-gray-700 mb-3 pb-3 border-b border-dashed border-gray-400">
-              <div>Harap bayar sebelum tanggal jatuh tempo</div>
-              <div className="mt-1">untuk menghindari pemutusan layanan</div>
-            </div>
-
             {/* Footer */}
             <div className="text-center text-xs text-gray-600">
               <div className="mb-2">Terima kasih atas kepercayaan Anda</div>

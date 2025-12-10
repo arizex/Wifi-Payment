@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Check, X, Plus, User, Phone, MapPin, Loader2, Trash2, FileText } from 'lucide-react';
+import { Check, X, Plus, User, Phone, MapPin, Loader2, Trash2, FileText, Edit } from 'lucide-react';
 import { supabase, Customer, Payment } from '../lib/supabase';
 import Invoice from './Invoice';
+import EditCustomerModal from './EditCustomerModal';
 
 interface CustomerWithPayment extends Customer {
   hasPaid: boolean;
@@ -23,6 +24,10 @@ export default function CustomerList({ selectedMonth, selectedYear, searchQuery,
   const [processing, setProcessing] = useState<string | null>(null);
   const [invoiceCustomer, setInvoiceCustomer] = useState<CustomerWithPayment | null>(null);
   const [selectedPaymentDay, setSelectedPaymentDay] = useState(1);
+  
+  // State untuk Edit Modal
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
 
   useEffect(() => {
     loadCustomers();
@@ -123,6 +128,17 @@ export default function CustomerList({ selectedMonth, selectedYear, searchQuery,
     }
   };
 
+  // Fungsi untuk handle edit
+  const handleEditCustomer = (customer: CustomerWithPayment) => {
+    setEditingCustomer(customer);
+    setIsEditModalOpen(true);
+  };
+
+  const handleEditSuccess = async () => {
+    await loadCustomers();
+    onRefresh();
+  };
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('id-ID', {
       style: 'currency',
@@ -176,6 +192,7 @@ export default function CustomerList({ selectedMonth, selectedYear, searchQuery,
 
   return (
     <div className="space-y-6">
+      {/* Modal Invoice */}
       {invoiceCustomer && (
         <Invoice
           customerName={invoiceCustomer.name}
@@ -188,6 +205,17 @@ export default function CustomerList({ selectedMonth, selectedYear, searchQuery,
           onClose={() => setInvoiceCustomer(null)}
         />
       )}
+
+      {/* Modal Edit Customer */}
+      <EditCustomerModal
+        isOpen={isEditModalOpen}
+        onClose={() => {
+          setIsEditModalOpen(false);
+          setEditingCustomer(null);
+        }}
+        onSuccess={handleEditSuccess}
+        customer={editingCustomer}
+      />
 
       <div className="flex gap-2">
         {[1, 10, 20].map(day => {
@@ -292,6 +320,14 @@ export default function CustomerList({ selectedMonth, selectedYear, searchQuery,
                     className="w-12 h-12 rounded-full flex items-center justify-center bg-blue-100 hover:bg-blue-200 text-blue-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <FileText className="w-6 h-6" />
+                  </button>
+                  {/* BUTTON EDIT - BARU */}
+                  <button
+                    onClick={() => handleEditCustomer(customer)}
+                    disabled={processing === customer.id}
+                    className="w-12 h-12 rounded-full flex items-center justify-center bg-orange-100 hover:bg-orange-200 text-orange-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Edit className="w-6 h-6" />
                   </button>
                   <button
                     onClick={() => deleteCustomer(customer)}
