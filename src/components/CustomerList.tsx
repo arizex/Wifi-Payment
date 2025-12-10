@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Check, X, Plus, User, Phone, MapPin, Loader2, Trash2, FileText, Edit } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Check, X, User, Phone, MapPin, Loader2, Trash2, FileText, Edit, MoreVertical } from 'lucide-react';
 import { supabase, Customer, Payment } from '../lib/supabase';
 import Invoice from './Invoice';
 import EditCustomerModal from './EditCustomerModal';
@@ -24,14 +24,28 @@ export default function CustomerList({ selectedMonth, selectedYear, searchQuery,
   const [processing, setProcessing] = useState<string | null>(null);
   const [invoiceCustomer, setInvoiceCustomer] = useState<CustomerWithPayment | null>(null);
   const [selectedPaymentDay, setSelectedPaymentDay] = useState(1);
-  
-  // State untuk Edit Modal
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
+  
+  // State untuk dropdown menu
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     loadCustomers();
   }, [selectedMonth, selectedYear, triggerRefresh]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setOpenMenuId(null);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const loadCustomers = async () => {
     setLoading(true);
@@ -72,6 +86,7 @@ export default function CustomerList({ selectedMonth, selectedYear, searchQuery,
 
   const togglePayment = async (customer: CustomerWithPayment) => {
     setProcessing(customer.id);
+    setOpenMenuId(null);
     try {
       if (customer.hasPaid && customer.paymentId) {
         const { error } = await supabase
@@ -105,6 +120,7 @@ export default function CustomerList({ selectedMonth, selectedYear, searchQuery,
   };
 
   const deleteCustomer = async (customer: CustomerWithPayment) => {
+    setOpenMenuId(null);
     if (!window.confirm(`Yakin ingin menghapus pelanggan "${customer.name}"? Tindakan ini tidak dapat dibatalkan.`)) {
       return;
     }
@@ -128,8 +144,8 @@ export default function CustomerList({ selectedMonth, selectedYear, searchQuery,
     }
   };
 
-  // Fungsi untuk handle edit
   const handleEditCustomer = (customer: CustomerWithPayment) => {
+    setOpenMenuId(null);
     setEditingCustomer(customer);
     setIsEditModalOpen(true);
   };
@@ -145,6 +161,10 @@ export default function CustomerList({ selectedMonth, selectedYear, searchQuery,
       currency: 'IDR',
       minimumFractionDigits: 0,
     }).format(amount);
+  };
+
+  const toggleMenu = (customerId: string) => {
+    setOpenMenuId(openMenuId === customerId ? null : customerId);
   };
 
   if (loading) {
@@ -192,7 +212,6 @@ export default function CustomerList({ selectedMonth, selectedYear, searchQuery,
 
   return (
     <div className="space-y-6">
-      {/* Modal Invoice */}
       {invoiceCustomer && (
         <Invoice
           customerName={invoiceCustomer.name}
@@ -206,7 +225,6 @@ export default function CustomerList({ selectedMonth, selectedYear, searchQuery,
         />
       )}
 
-      {/* Modal Edit Customer */}
       <EditCustomerModal
         isOpen={isEditModalOpen}
         onClose={() => {
@@ -297,6 +315,7 @@ export default function CustomerList({ selectedMonth, selectedYear, searchQuery,
                 </div>
 
                 <div className="ml-4 flex-shrink-0 flex gap-2">
+                  {/* Button Check/Uncheck */}
                   <button
                     onClick={() => togglePayment(customer)}
                     disabled={processing === customer.id}
@@ -314,6 +333,8 @@ export default function CustomerList({ selectedMonth, selectedYear, searchQuery,
                       <X className="w-6 h-6" strokeWidth={3} />
                     )}
                   </button>
+
+                  {/* Button Invoice */}
                   <button
                     onClick={() => setInvoiceCustomer(customer)}
                     disabled={processing === customer.id}
@@ -321,21 +342,38 @@ export default function CustomerList({ selectedMonth, selectedYear, searchQuery,
                   >
                     <FileText className="w-6 h-6" />
                   </button>
-                  {/* BUTTON EDIT - BARU */}
-                  <button
-                    onClick={() => handleEditCustomer(customer)}
-                    disabled={processing === customer.id}
-                    className="w-12 h-12 rounded-full flex items-center justify-center bg-orange-100 hover:bg-orange-200 text-orange-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <Edit className="w-6 h-6" />
-                  </button>
-                  <button
-                    onClick={() => deleteCustomer(customer)}
-                    disabled={processing === customer.id}
-                    className="w-12 h-12 rounded-full flex items-center justify-center bg-red-100 hover:bg-red-200 text-red-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <Trash2 className="w-6 h-6" />
-                  </button>
+
+                  {/* Button Menu Dropdown (3 titik) */}
+                  <div className="relative" ref={openMenuId === customer.id ? menuRef : null}>
+                    <button
+                      onClick={() => toggleMenu(customer.id)}
+                      disabled={processing === customer.id}
+                      className="w-12 h-12 rounded-full flex items-center justify-center bg-gray-100 hover:bg-gray-200 text-gray-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <MoreVertical className="w-6 h-6" />
+                    </button>
+
+                    {/* Dropdown Menu */}
+                    {openMenuId === customer.id && (
+                      <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+                        <button
+                          onClick={() => handleEditCustomer(customer)}
+                          className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-orange-50 text-gray-700 transition-colors rounded-t-lg"
+                        >
+                          <Edit className="w-5 h-5 text-orange-600" />
+                          <span className="font-medium">Edit</span>
+                        </button>
+                        <div className="border-t border-gray-200"></div>
+                        <button
+                          onClick={() => deleteCustomer(customer)}
+                          className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-red-50 text-gray-700 transition-colors rounded-b-lg"
+                        >
+                          <Trash2 className="w-5 h-5 text-red-600" />
+                          <span className="font-medium">Hapus</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
